@@ -28,7 +28,7 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <activity
-            android:name="io.flutter.embedding.android.FlutterActivity"
+            android:name="com.cloudwebrtc.flutterwebrtcdemo.MainActivity"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|layoutDirection|fontScale|screenLayout|density"

@@ -1,13 +1,12 @@
 import 'dart:convert';
 import 'dart:async';
+import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import 'random_string.dart';
 
 import '../utils/device_info.dart'
     if (dart.library.js) '../utils/device_info_web.dart';
-import '../utils/websocket.dart'
-    if (dart.library.js) '../utils/websocket_web.dart';
 import '../utils/turn.dart' if (dart.library.js) '../utils/turn_web.dart';
 
 enum SignalingState {
@@ -45,13 +44,14 @@ class Session {
 }
 
 class Signaling {
-  Signaling(this._host);
+  Signaling(this._mc, this._selfId, this._peerMessengerId);
 
   JsonEncoder _encoder = JsonEncoder();
   JsonDecoder _decoder = JsonDecoder();
-  String _selfId = randomNumeric(6);
-  SimpleWebSocket _socket;
-  var _host;
+  String _selfId;
+  MethodChannel _mc;
+  MethodChannel _mc2 = MethodChannel('mc2');
+  var _peerMessengerId;
   var _port = 8086;
   var _turnCredential;
   Map<String, Session> _sessions = {};
@@ -63,7 +63,6 @@ class Signaling {
   StreamStateCallback onLocalStream;
   StreamStateCallback onAddRemoteStream;
   StreamStateCallback onRemoveRemoteStream;
-  OtherEventCallback onPeersUpdate;
   DataChannelMessageCallback onDataChannelMessage;
   DataChannelCallback onDataChannel;
 
@@ -101,7 +100,6 @@ class Signaling {
 
   close() async {
     await _cleanSessions();
-    if (_socket != null) _socket.close();
   }
 
   void switchCamera() {
@@ -146,17 +144,6 @@ class Signaling {
     var data = mapData['data'];
 
     switch (mapData['type']) {
-      case 'peers':
-        {
-          List<dynamic> peers = data;
-          if (onPeersUpdate != null) {
-            Map<String, dynamic> event = Map<String, dynamic>();
-            event['self'] = _selfId;
-            event['peers'] = peers;
-            onPeersUpdate?.call(event);
-          }
-        }
-        break;
       case 'offer':
         {
           var peerId = data['from'];
@@ -239,14 +226,10 @@ class Signaling {
   }
 
   Future<void> connect() async {
-    var url = 'https://$_host:$_port/ws';
-    _socket = SimpleWebSocket(url);
-
-    print('connect to $url');
-
     if (_turnCredential == null) {
       try {
-        _turnCredential = await getTurnCredential(_host, _port);
+        _turnCredential =
+            await getTurnCredential('demo.cloudwebrtc.com', _port);
         /*{
             "username": "1584195784:mbzrxpgjys",
             "password": "isyl6FF6nqMTB9/ig5MrMRUXqZg",
@@ -266,27 +249,18 @@ class Signaling {
       } catch (e) {}
     }
 
-    _socket.onOpen = () {
-      print('onOpen');
-      onSignalingStateChange?.call(SignalingState.ConnectionOpen);
-      _send('new', {
-        'name': DeviceInfo.label,
-        'id': _selfId,
-        'user_agent': DeviceInfo.userAgent
-      });
-    };
+    onSignalingStateChange?.call(SignalingState.ConnectionOpen);
+    _send('new', {
+      'name': DeviceInfo.label,
+      'id': _selfId,
+      'user_agent': DeviceInfo.userAgent
+    });
 
-    _socket.onMessage = (message) {
-      print('Received data: ' + message);
-      onMessage(_decoder.convert(message));
-    };
-
-    _socket.onClose = (int code, String reason) {
-      print('Closed by server [$code => $reason]!');
-      onSignalingStateChange?.call(SignalingState.ConnectionClosed);
-    };
-
-    await _socket.connect();
+    _mc2.setMethodCallHandler((call) {
+      var args = call.arguments as Map;
+      onMessage(_decoder.convert(args["content"] as String));
+      return Future.value(null);
+    });
   }
 
   Future<MediaStream> createStream(String media, bool userScreen) async {
@@ -481,7 +455,10 @@ class Signaling {
     var request = Map();
     request["type"] = event;
     request["data"] = data;
-    _socket.send(_encoder.convert(request));
+    _mc.invokeMethod('sendSignal', {
+      'recipientId': _peerMessengerId,
+      'content': _encoder.convert(request),
+    });
   }
 
   Future<void> _cleanSessions() async {

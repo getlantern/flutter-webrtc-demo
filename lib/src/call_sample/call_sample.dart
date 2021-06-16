@@ -1,14 +1,28 @@
-import 'package:flutter/material.dart';
 import 'dart:core';
-import 'signaling.dart';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+
+import 'signaling.dart';
 
 class CallSample extends StatefulWidget {
   static String tag = 'call_sample';
 
-  final String host;
+  final MethodChannel mc;
+  final String selfMessengerId;
+  final String peerMessengerId;
 
-  CallSample({Key key, @required this.host}) : super(key: key);
+  CallSample(
+      {Key key,
+      @required this.mc,
+      @required this.selfMessengerId,
+      @required this.peerMessengerId})
+      : super(key: key) {
+    mc.invokeMethod("addOrUpdateContact", {
+      "contactId": peerMessengerId,
+    });
+  }
 
   @override
   _CallSampleState createState() => _CallSampleState();
@@ -31,6 +45,12 @@ class _CallSampleState extends State<CallSample> {
     super.initState();
     initRenderers();
     _connect();
+    _peers = [
+      {
+        'name': 'The other party',
+        'id': widget.peerMessengerId,
+      }
+    ];
   }
 
   initRenderers() async {
@@ -48,7 +68,9 @@ class _CallSampleState extends State<CallSample> {
 
   void _connect() async {
     if (_signaling == null) {
-      _signaling = Signaling(widget.host)..connect();
+      _signaling =
+          Signaling(widget.mc, widget.selfMessengerId, widget.peerMessengerId)
+            ..connect();
 
       _signaling.onSignalingStateChange = (SignalingState state) {
         switch (state) {
@@ -80,13 +102,6 @@ class _CallSampleState extends State<CallSample> {
           case CallState.CallStateRinging:
         }
       };
-
-      _signaling.onPeersUpdate = ((event) {
-        setState(() {
-          _selfId = event['self'];
-          _peers = event['peers'];
-        });
-      });
 
       _signaling.onLocalStream = ((_, stream) {
         _localRenderer.srcObject = stream;
@@ -123,12 +138,9 @@ class _CallSampleState extends State<CallSample> {
   }
 
   _buildRow(context, peer) {
-    var self = (peer['id'] == _selfId);
     return ListBody(children: <Widget>[
       ListTile(
-        title: Text(self
-            ? peer['name'] + '[Your self]'
-            : peer['name'] + '[' + peer['user_agent'] + ']'),
+        title: Text(peer['name']),
         onTap: null,
         trailing: SizedBox(
             width: 100.0,

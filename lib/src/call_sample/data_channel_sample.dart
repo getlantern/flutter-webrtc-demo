@@ -1,16 +1,26 @@
-import 'package:flutter/material.dart';
-import 'dart:core';
 import 'dart:async';
+import 'dart:core';
 import 'dart:typed_data';
-import 'signaling.dart';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+
+import 'signaling.dart';
 
 class DataChannelSample extends StatefulWidget {
   static String tag = 'call_sample';
 
-  final String host;
+  final MethodChannel mc;
+  final String selfMessengerId;
+  final String peerMessengerId;
 
-  DataChannelSample({Key key, @required this.host}) : super(key: key);
+  DataChannelSample(
+      {Key key,
+      @required this.mc,
+      @required this.selfMessengerId,
+      @required this.peerMessengerId})
+      : super(key: key);
 
   @override
   _DataChannelSampleState createState() => _DataChannelSampleState();
@@ -25,6 +35,7 @@ class _DataChannelSampleState extends State<DataChannelSample> {
   Session _session;
   Timer _timer;
   var _text = '';
+
   // ignore: unused_element
   _DataChannelSampleState({Key key});
 
@@ -45,7 +56,9 @@ class _DataChannelSampleState extends State<DataChannelSample> {
 
   void _connect() async {
     if (_signaling == null) {
-      _signaling = Signaling(widget.host)..connect();
+      _signaling =
+          Signaling(widget.mc, widget.selfMessengerId, widget.peerMessengerId)
+            ..connect();
 
       _signaling.onDataChannelMessage = (_, dc, RTCDataChannelMessage data) {
         setState(() {
@@ -102,13 +115,6 @@ class _DataChannelSampleState extends State<DataChannelSample> {
           case CallState.CallStateRinging:
         }
       };
-
-      _signaling.onPeersUpdate = ((event) {
-        setState(() {
-          _selfId = event['self'];
-          _peers = event['peers'];
-        });
-      });
     }
   }
 
