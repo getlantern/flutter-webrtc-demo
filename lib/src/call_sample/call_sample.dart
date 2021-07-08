@@ -10,12 +10,14 @@ class CallSample extends StatefulWidget {
   static String tag = 'call_sample';
 
   final MethodChannel mc;
+  final MethodChannel mc2;
   final String selfMessengerId;
   final String peerMessengerId;
 
   CallSample(
       {Key key,
       @required this.mc,
+      @required this.mc2,
       @required this.selfMessengerId,
       @required this.peerMessengerId})
       : super(key: key) {
@@ -68,9 +70,9 @@ class _CallSampleState extends State<CallSample> {
 
   void _connect() async {
     if (_signaling == null) {
-      _signaling =
-          Signaling(widget.mc, widget.selfMessengerId, widget.peerMessengerId)
-            ..connect();
+      _signaling = Signaling(
+          widget.mc, widget.mc2, widget.selfMessengerId, widget.peerMessengerId)
+        ..connect();
 
       _signaling.onSignalingStateChange = (SignalingState state) {
         switch (state) {

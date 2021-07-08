@@ -22,6 +22,7 @@ enum DialogDemoAction {
 
 class _MyAppState extends State<MyApp> {
   var mc = MethodChannel('mc');
+  var mc2 = MethodChannel('mc2');
 
   List<RouteItem> items;
   String _selfMessengerId = '';
@@ -106,10 +107,12 @@ class _MyAppState extends State<MyApp> {
                   builder: (BuildContext context) => _datachannel
                       ? DataChannelSample(
                           mc: mc,
+                          mc2: mc2,
                           selfMessengerId: _selfMessengerId,
                           peerMessengerId: _peerMessengerId)
                       : CallSample(
                           mc: mc,
+                          mc2: mc2,
                           selfMessengerId: _selfMessengerId,
                           peerMessengerId: _peerMessengerId)));
         }

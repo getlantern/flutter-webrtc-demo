@@ -44,13 +44,13 @@ class Session {
 }
 
 class Signaling {
-  Signaling(this._mc, this._selfId, this._peerMessengerId);
+  Signaling(this._mc, this._mc2, this._selfId, this._peerMessengerId);
 
   JsonEncoder _encoder = JsonEncoder();
   JsonDecoder _decoder = JsonDecoder();
   String _selfId;
   MethodChannel _mc;
-  MethodChannel _mc2 = MethodChannel('mc2');
+  MethodChannel _mc2;
   var _peerMessengerId;
   var _port = 8086;
   var _turnCredential;
