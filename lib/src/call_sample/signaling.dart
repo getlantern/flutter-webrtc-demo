@@ -44,14 +44,13 @@ class Session {
 }
 
 class Signaling {
-  Signaling(this._mc, this._mc2, this._selfId, this._peerMessengerId);
+  Signaling(this._mc, this._mc2, this._selfId);
 
   JsonEncoder _encoder = JsonEncoder();
   JsonDecoder _decoder = JsonDecoder();
   String _selfId;
   MethodChannel _mc;
   MethodChannel _mc2;
-  var _peerMessengerId;
   var _port = 8086;
   var _turnCredential;
   Map<String, Session> _sessions = {};
@@ -130,13 +129,14 @@ class Signaling {
     onCallStateChange?.call(session, CallState.CallStateNew);
   }
 
-  void bye(String sessionId) {
-    _send('bye', {
-      'session_id': sessionId,
+  void bye(Session session) {
+    _send(session.pid, 'bye', {
+      'session_id': session.sid,
       'from': _selfId,
     });
 
-    _closeSession(_sessions[sessionId]);
+    onCallStateChange?.call(session, CallState.CallStateBye);
+    _closeSession(_sessions[session.sid]);
   }
 
   void onMessage(message) async {
@@ -250,11 +250,11 @@ class Signaling {
     }
 
     onSignalingStateChange?.call(SignalingState.ConnectionOpen);
-    _send('new', {
-      'name': DeviceInfo.label,
-      'id': _selfId,
-      'user_agent': DeviceInfo.userAgent
-    });
+    // _send('new', {
+    //   'name': DeviceInfo.label,
+    //   'id': _selfId,
+    //   'user_agent': DeviceInfo.userAgent
+    // });
 
     _mc2.setMethodCallHandler((call) {
       var args = call.arguments as Map;
@@ -371,8 +371,8 @@ class Signaling {
         print('onIceCandidate: complete!');
         return;
       }
-      _send('candidate', {
-        'to': peerId,
+      _send(peerId, 'candidate', {
+        // 'to': peerId,
         'from': _selfId,
         'candidate': {
           'sdpMLineIndex': candidate.sdpMlineIndex,
@@ -423,8 +423,8 @@ class Signaling {
       RTCSessionDescription s =
           await session.pc.createOffer(media == 'data' ? _dcConstraints : {});
       await session.pc.setLocalDescription(s);
-      _send('offer', {
-        'to': session.pid,
+      _send(session.pid, 'offer', {
+        // 'to': session.pid,
         'from': _selfId,
         'description': {'sdp': s.sdp, 'type': s.type},
         'session_id': session.sid,
@@ -440,8 +440,8 @@ class Signaling {
       RTCSessionDescription s =
           await session.pc.createAnswer(media == 'data' ? _dcConstraints : {});
       await session.pc.setLocalDescription(s);
-      _send('answer', {
-        'to': session.pid,
+      _send(session.pid, 'answer', {
+        // 'to': session.pid,
         'from': _selfId,
         'description': {'sdp': s.sdp, 'type': s.type},
         'session_id': session.sid,
@@ -451,12 +451,12 @@ class Signaling {
     }
   }
 
-  _send(event, data) {
+  _send(peerId, event, data) {
     var request = Map();
     request["type"] = event;
     request["data"] = data;
     _mc.invokeMethod('sendSignal', {
-      'recipientId': _peerMessengerId,
+      'recipientId': peerId,
       'content': _encoder.convert(request),
     });
   }

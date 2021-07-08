@@ -58,8 +58,7 @@ class _DataChannelSampleState extends State<DataChannelSample> {
 
   void _connect() async {
     if (_signaling == null) {
-      _signaling = Signaling(
-          widget.mc, widget.mc2, widget.selfMessengerId, widget.peerMessengerId)
+      _signaling = Signaling(widget.mc, widget.mc2, widget.selfMessengerId)
         ..connect();
 
       _signaling.onDataChannelMessage = (_, dc, RTCDataChannelMessage data) {
@@ -141,7 +140,7 @@ class _DataChannelSampleState extends State<DataChannelSample> {
 
   _hangUp() {
     if (_signaling != null) {
-      _signaling.bye(_session.sid);
+      _signaling.bye(_session);
     }
   }
 
